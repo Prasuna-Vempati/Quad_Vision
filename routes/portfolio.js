@@ -477,4 +477,16 @@ router.get("/top-movers", (req, res) => {
   });
 });
 
+router.get("/balance", (req, res) => {
+  db.query(
+    "SELECT balance FROM account_balance WHERE id = 1",
+    (err, result) => {
+      if (err) return res.status(500).send(err);
+
+      console.log(result);
+      res.json({ balance: result[0].balance });
+    }
+  );
+});
+
 export default router;
