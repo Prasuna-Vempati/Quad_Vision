@@ -1,187 +1,3 @@
-// import express from "express";
-// import db from "../db.js";
-// import axios from "axios";
-
-// const router = express.Router();
-
-// // Stock API config
-// const API_KEY = "LUTZAJVO9S0Q5VRV";
-// const API_URL = "https://www.alphavantage.co/query";
-
-// // GET Portfolio with Realized & Unrealized P/L
-// router.get("/", async (req, res) => {
-//   try {
-//     db.query("SELECT * FROM portfolio", async (err, portfolioRows) => {
-//       if (err) throw err;
-
-//       let totalValue = 0;
-//       let unrealizedPL = 0;
-
-//       const updatedPortfolio = await Promise.all(
-//         portfolioRows.map(async (stock) => {
-//           try {
-//             const { data } = await axios.get(API_URL, {
-//               params: {
-//                 function: "GLOBAL_QUOTE",
-//                 symbol: stock.stock_symbol,
-//                 apikey: API_KEY,
-//               },
-//             });
-
-//             console.log(data);
-
-//             const currentPrice =
-//               parseFloat(data["Global Quote"]["05. price"]) || 0;
-//             const pl = (currentPrice - stock.avg_buy_price) * stock.quantity;
-
-//             totalValue += currentPrice * stock.quantity;
-//             unrealizedPL += pl;
-
-//             return {
-//               ...stock,
-//               current_price: currentPrice,
-//               unrealized_pl: pl,
-//             };
-//           } catch (apiErr) {
-//             console.error(`Error fetching ${stock.stock_symbol}:`, apiErr);
-//             return { ...stock, current_price: 0, unrealized_pl: 0 };
-//           }
-//         })
-//       );
-
-//       db.query(
-//         "SELECT SUM(realized_pl) AS total_realized FROM realized_profit_loss",
-//         (err, result) => {
-//           if (err) throw err;
-//           //   const realizedPL = result[0].total_realized || 0;
-
-//           const realizedPL = Number(result[0].total_realized) || 0;
-
-//           res.json({
-//             total_portfolio_value: totalValue,
-//             realized_pl: realizedPL,
-//             unrealized_pl: unrealizedPL,
-//             portfolio: updatedPortfolio,
-//           });
-//         }
-//       );
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
-// // POST Add Investment (Buy/Sell)
-// router.post("/add", (req, res) => {
-//   const { stock_symbol, quantity, price_per_share, transaction_type } =
-//     req.body;
-
-//   db.query(
-//     "INSERT INTO transactions (stock_symbol, quantity, price_per_share, transaction_type) VALUES (?, ?, ?, ?)",
-//     [stock_symbol, quantity, price_per_share, transaction_type],
-//     (err) => {
-//       if (err) throw err;
-
-//       console.log(quantity);
-//       if (transaction_type === "BUY") {
-//         db.query(
-//           "SELECT * FROM portfolio WHERE stock_symbol = ?",
-//           [stock_symbol],
-//           (err, rows) => {
-//             if (err) throw err;
-
-//             if (rows.length > 0) {
-//               const existing = rows[0];
-//               console.log(existing);
-//               const newQty = existing.quantity + quantity;
-//               console.log(newQty);
-//               const newAvg =
-//                 (existing.quantity * existing.avg_buy_price +
-//                   quantity * price_per_share) /
-//                 newQty;
-
-//               db.query(
-//                 "UPDATE portfolio SET quantity = ?, avg_buy_price = ? WHERE stock_symbol = ?",
-//                 [newQty, newAvg, stock_symbol]
-//               );
-//             } else {
-//               db.query(
-//                 "INSERT INTO portfolio (stock_symbol, quantity, avg_buy_price) VALUES (?, ?, ?)",
-//                 [stock_symbol, quantity, price_per_share]
-//               );
-//             }
-//           }
-//         );
-//       } else if (transaction_type === "SELL") {
-//         db.query(
-//           "SELECT * FROM portfolio WHERE stock_symbol = ?",
-//           [stock_symbol],
-//           (err, rows) => {
-//             if (err) throw err;
-//             if (rows.length === 0) return;
-
-//             const existing = rows[0];
-//             const realizedPL =
-//               (price_per_share - existing.avg_buy_price) * quantity;
-
-//             db.query(
-//               "INSERT INTO realized_profit_loss (stock_symbol, realized_pl) VALUES (?, ?)",
-//               [stock_symbol, realizedPL]
-//             );
-
-//             const newQty = existing.quantity - quantity;
-//             if (newQty > 0) {
-//               db.query(
-//                 "UPDATE portfolio SET quantity = ? WHERE stock_symbol = ?",
-//                 [newQty, stock_symbol]
-//               );
-//             } else {
-//               db.query("DELETE FROM portfolio WHERE stock_symbol = ?", [
-//                 stock_symbol,
-//               ]);
-//             }
-//           }
-//         );
-//       }
-
-//       res.json({ message: "Transaction added successfully" });
-//     }
-//   );
-// });
-
-// router.get("/ticker", async (req, res) => {
-//   try {
-//     const symbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN"]; // Change to your preferred list
-//     const results = [];
-
-//     for (const symbol of symbols) {
-//       const { data } = await axios.get(API_URL, {
-//         params: {
-//           function: "GLOBAL_QUOTE",
-//           symbol,
-//           apikey: API_KEY,
-//         },
-//       });
-
-//       const quote = data["Global Quote"];
-//       if (quote) {
-//         results.push({
-//           symbol,
-//           price: parseFloat(quote["05. price"]) || 0,
-//           change: parseFloat(quote["09. change"]) || 0,
-//           change_percent: quote["10. change percent"] || "0%",
-//         });
-//       }
-//     }
-
-//     res.json(results);
-//   } catch (error) {
-//     console.error("Ticker error:", error);
-//     res.status(500).json({ error: "Failed to fetch ticker data" });
-//   }
-// });
-
-// export default router;
 import express from "express";
 import db from "../db.js";
 
@@ -193,59 +9,75 @@ const router = express.Router();
 let mockPrices = {};
 
 const generateRandomPrice = (base = 100) => {
-  const change = (Math.random() * 10 - 5).toFixed(2);
+  const change = (Math.random() * 10 - 5).toFixed(2); // Random ±5
   return parseFloat((base + parseFloat(change)).toFixed(2));
 };
 
 const updateMockPrices = () => {
-  db.query("SELECT DISTINCT stock_symbol FROM portfolio", (err, rows) => {
-    if (err) return console.error(err);
-    rows.forEach(({ stock_symbol }) => {
-      if (!mockPrices[stock_symbol]) {
-        mockPrices[stock_symbol] = generateRandomPrice(100);
-      } else {
-        mockPrices[stock_symbol] = generateRandomPrice(
-          mockPrices[stock_symbol]
-        );
-      }
+  db.query("SELECT stock_symbol FROM portfolio", (err, results) => {
+    if (err) {
+      console.error("Error fetching stock symbols:", err);
+      return;
+    }
+
+    results.forEach((row) => {
+      const basePrice = mockPrices[row.stock_symbol] || 100;
+      mockPrices[row.stock_symbol] = generateRandomPrice(basePrice);
     });
   });
 };
-setInterval(updateMockPrices, 2 * 60 * 1000);
-updateMockPrices();
+
+// Update every 10 seconds
+setInterval(updateMockPrices, 10000);
 
 // ===============================
-// GET Portfolio (Dashboard)
+// GET /dashboard – Portfolio Summary
 // ===============================
 router.get("/", (req, res) => {
   db.query("SELECT * FROM portfolio", (err, portfolioRows) => {
-    if (err) throw err;
+    if (err) {
+      console.error("Error fetching portfolio:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
 
     let totalValue = 0;
 
     const updatedPortfolio = portfolioRows.map((stock) => {
       const currentPrice = mockPrices[stock.stock_symbol] ?? 100;
-      const pl =
-        (currentPrice - Number(stock.avg_buy_price)) * Number(stock.quantity);
+      const buyPrice = Number(stock.buy_price);
+      const quantity = Number(stock.quantity);
+      const total = currentPrice * quantity;
+      const profitLoss = (currentPrice - buyPrice) * quantity;
+      const pnlPercent = ((currentPrice - buyPrice) / buyPrice) * 100;
 
-      totalValue += currentPrice * Number(stock.quantity);
+      totalValue += total;
 
       return {
-        ...stock,
-        current_price: currentPrice,
+        id: stock.id,
+        stock_symbol: stock.stock_symbol,
+        company_name: stock.company_name || stock.stock_symbol, // fallback
+        buy_price: buyPrice,
+        quantity,
+        current_price: currentPrice.toFixed(2),
+        total_value: total.toFixed(2),
+        profit_loss: profitLoss.toFixed(2),
+        pnl_percent: pnlPercent.toFixed(2),
       };
     });
 
     db.query(
       "SELECT SUM(realized_pl) AS total_realized FROM realized_profit_loss",
       (err, result) => {
-        if (err) throw err;
+        if (err) {
+          console.error("Error fetching realized P&L:", err);
+          return res.status(500).json({ error: "Internal server error" });
+        }
 
         const realizedPL = Number(result[0].total_realized) || 0;
 
         res.json({
-          total_portfolio_value: totalValue,
-          realized_pl: realizedPL,
+          total_portfolio_value: totalValue.toFixed(2),
+          realized_pl: realizedPL.toFixed(2),
           portfolio: updatedPortfolio,
         });
       }
@@ -253,94 +85,59 @@ router.get("/", (req, res) => {
   });
 });
 
-// ===============================
-// POST Add Investment
-// ===============================
-router.post("/add", (req, res) => {
-  const stock_symbol = req.body.stock_symbol.toUpperCase();
-  const quantity = Number(req.body.quantity);
-  const transaction_type = req.body.transaction_type;
+// router.post("/add", (req, res) => {
+//   const { stock_symbol, company_name, quantity, buy_price } = req.body;
 
-  const price_per_share = mockPrices[stock_symbol] ?? generateRandomPrice(100);
-  mockPrices[stock_symbol] = price_per_share;
+//   console.log(company_name, stock_symbol, quantity, buy_price);
+
+//   db.query(
+//     "INSERT INTO portfolio (stock_symbol, company_name, quantity, buy_price) VALUES (?, ?, ?, ?)",
+//     [stock_symbol, company_name, quantity, buy_price],
+//     (err, result) => {
+//       if (err) return res.status(500).json({ error: err });
+//       res.json({ message: "Stock added to portfolio" });
+//     }
+//   );
+
+
+
+
+// });
+
+
+router.post("/add", (req, res) => {
+  const { stock_symbol, company_name, quantity, buy_price } = req.body;
+
+  const totalCost = quantity * buy_price;
 
   db.query(
-    "INSERT INTO transactions (stock_symbol, quantity, price_per_share, transaction_type) VALUES (?, ?, ?, ?)",
-    [stock_symbol, quantity, price_per_share, transaction_type],
-    (err) => {
-      if (err) throw err;
+    "INSERT INTO portfolio (stock_symbol, company_name, quantity, buy_price) VALUES (?, ?, ?, ?)",
+    [stock_symbol, company_name, quantity, buy_price],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err });
 
-      if (transaction_type === "BUY") {
-        db.query(
-          "SELECT * FROM portfolio WHERE stock_symbol = ?",
-          [stock_symbol],
-          (err, rows) => {
-            if (err) throw err;
-
-            if (rows.length > 0) {
-              const existing = rows[0];
-              const newQty = Number(existing.quantity) + quantity;
-              const newAvg =
-                (Number(existing.quantity) * Number(existing.avg_buy_price) +
-                  quantity * price_per_share) /
-                newQty;
-
-              db.query(
-                "UPDATE portfolio SET quantity = ?, avg_buy_price = ? WHERE stock_symbol = ?",
-                [newQty, newAvg, stock_symbol]
-              );
-            } else {
-              db.query(
-                "INSERT INTO portfolio (stock_symbol, quantity, avg_buy_price) VALUES (?, ?, ?)",
-                [stock_symbol, quantity, price_per_share]
-              );
-            }
+      // ✅ Deduct balance
+      db.query(
+        "UPDATE account_balance SET balance = balance - ? WHERE id = 1",
+        [totalCost],
+        (err2) => {
+          if (err2) {
+            console.error("Balance deduction failed:", err2);
+            return res.status(500).json({ message: "Stock added but balance update failed." });
           }
-        );
-      } else if (transaction_type === "SELL") {
-        db.query(
-          "SELECT * FROM portfolio WHERE stock_symbol = ?",
-          [stock_symbol],
-          (err, rows) => {
-            if (err) throw err;
-            if (rows.length === 0) return;
-
-            const existing = rows[0];
-            const realizedPL =
-              (price_per_share - Number(existing.avg_buy_price)) * quantity;
-
-            db.query(
-              "INSERT INTO realized_profit_loss (stock_symbol, realized_pl) VALUES (?, ?)",
-              [stock_symbol, realizedPL]
-            );
-
-            const newQty = Number(existing.quantity) - quantity;
-            if (newQty > 0) {
-              db.query(
-                "UPDATE portfolio SET quantity = ? WHERE stock_symbol = ?",
-                [newQty, stock_symbol]
-              );
-            } else {
-              db.query("DELETE FROM portfolio WHERE stock_symbol = ?", [
-                stock_symbol,
-              ]);
-            }
-          }
-        );
-      }
-
-      res.json({
-        message: `Transaction added at market price ${price_per_share}`,
-      });
+          res.json({ message: "Stock added and balance updated." });
+        }
+      );
     }
   );
 });
+
 
 // ===============================
 // GET Ticker Data (for Carousel)
 // ===============================
 router.get("/ticker", (req, res) => {
-  const symbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN"];
+  const symbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN","BTC", "ETH", "ADA", "XRP", "SOL","NFLX"];
   const results = symbols.map((symbol) => {
     if (!mockPrices[symbol]) {
       mockPrices[symbol] = generateRandomPrice(100);
@@ -363,49 +160,99 @@ router.get("/ticker", (req, res) => {
 // ===============================
 // Record End-of-Day Snapshot (3 PM)
 // ===============================
+// const recordDailySnapshot = () => {
+//   const now = new Date();
+//   const hours = now.getHours();
+//   const minutes = now.getMinutes();
+
+//   if (hours === 20 && minutes === 0) {
+//     db.query(
+//       "SELECT * FROM profit_loss_history WHERE date = CURDATE()",
+//       (err, rows) => {
+//         if (err) return console.error(err);
+//         if (rows.length > 0) return; // already saved today
+
+//         db.query("SELECT * FROM portfolio", (err, portfolioRows) => {
+//           if (err) return console.error(err);
+
+//           let totalValue = 0;
+//           portfolioRows.forEach((stock) => {
+//             const price = mockPrices[stock.stock_symbol] ?? 100;
+//             totalValue += price * Number(stock.quantity);
+//           });
+
+//           db.query(
+//             "SELECT SUM(realized_pl) AS total_realized FROM realized_profit_loss",
+//             (err, result) => {
+//               if (err) return console.error(err);
+//               const realizedPL = Number(result[0].total_realized) || 0;
+
+//               db.query(
+//                 "INSERT INTO profit_loss_history (date, realized_pl, total_value) VALUES (CURDATE(), ?, ?)",
+//                 [realizedPL, totalValue],
+//                 (err) => {
+//                   if (err) console.error(err);
+//                   else console.log("✅ Snapshot saved for", now.toDateString());
+//                 }
+//               );
+//             }
+//           );
+//         });
+//       }
+//     );
+//   }
+// };
+// setInterval(recordDailySnapshot, 60 * 1000)
 const recordDailySnapshot = () => {
   const now = new Date();
   const hours = now.getHours();
   const minutes = now.getMinutes();
 
-  if (hours === 20 && minutes === 0) {
+  if (hours === 15 && minutes === 0) { // You said 3PM — adjust if needed
     db.query(
       "SELECT * FROM profit_loss_history WHERE date = CURDATE()",
       (err, rows) => {
         if (err) return console.error(err);
-        if (rows.length > 0) return; // already saved today
+        if (rows.length > 0) return; 
 
         db.query("SELECT * FROM portfolio", (err, portfolioRows) => {
           if (err) return console.error(err);
 
           let totalValue = 0;
+          let unrealizedPL = 0;
+
           portfolioRows.forEach((stock) => {
-            const price = mockPrices[stock.stock_symbol] ?? 100;
-            totalValue += price * Number(stock.quantity);
+            const currentPrice = mockPrices[stock.stock_symbol] ?? 100;
+            const quantity = Number(stock.quantity);
+            const buyPrice = Number(stock.buy_price);
+
+            totalValue += currentPrice * quantity;
+            unrealizedPL += (currentPrice - buyPrice) * quantity;
           });
 
-          db.query(
-            "SELECT SUM(realized_pl) AS total_realized FROM realized_profit_loss",
-            (err, result) => {
-              if (err) return console.error(err);
-              const realizedPL = Number(result[0].total_realized) || 0;
+          // db.query(
+          //   "SELECT SUM(realized_pl) AS total_realized FROM realized_profit_loss",
+          //   (err, result) => {
+          //     if (err) return console.error(err);
+          //     const realizedPL = Number(result[0].total_realized) || 0;
 
               db.query(
                 "INSERT INTO profit_loss_history (date, realized_pl, total_value) VALUES (CURDATE(), ?, ?)",
-                [realizedPL, totalValue],
+                [unrealizedPL, totalValue],
                 (err) => {
                   if (err) console.error(err);
-                  else console.log("✅ Snapshot saved for", now.toDateString());
+                  else console.log("✅ Snapshot saved with unrealized P/L for", now.toDateString());
                 }
               );
             }
           );
         });
       }
-    );
+
   }
-};
-setInterval(recordDailySnapshot, 60 * 1000);
+
+setInterval(recordDailySnapshot, 60 * 1000); // check every minute
+
 
 // ===============================
 // GET Performance History API
@@ -413,7 +260,8 @@ setInterval(recordDailySnapshot, 60 * 1000);
 router.get("/history", (req, res) => {
   const { frequency } = req.query; // daily, weekly, monthly
   let groupBy = "DATE(date)";
-  if (frequency === "weekly") groupBy = "YEARWEEK(date)";
+  if (frequency === "weekly") groupBy = "DATE_FORMAT(date, '%x-W%v')";
+
   if (frequency === "monthly") groupBy = "DATE_FORMAT(date, '%Y-%m')";
 
   db.query(
@@ -435,6 +283,10 @@ router.get("/history", (req, res) => {
   );
 });
 
+
+
+
+
 router.get("/transactions", (req, res) => {
   db.query(
     "SELECT * FROM transactions ORDER BY transaction_date DESC",
@@ -451,9 +303,9 @@ router.get("/top-movers", (req, res) => {
 
     const movers = rows.map((stock) => {
       const currentPrice =
-        mockPrices[stock.stock_symbol] ?? stock.avg_buy_price;
+        mockPrices[stock.stock_symbol] ?? stock.buy_price;
       const changePercent =
-        ((currentPrice - stock.avg_buy_price) / stock.avg_buy_price) * 100;
+        ((currentPrice - stock.buy_price) / stock.buy_price) * 100;
 
       return {
         stock_symbol: stock.stock_symbol,
@@ -477,16 +329,132 @@ router.get("/top-movers", (req, res) => {
   });
 });
 
-router.get("/balance", (req, res) => {
-  db.query(
-    "SELECT balance FROM account_balance WHERE id = 1",
-    (err, result) => {
-      if (err) return res.status(500).send(err);
 
-      console.log(result);
-      res.json({ balance: result[0].balance });
+router.get("/balance",(req, res) => {
+  db.query("SELECT balance FROM account_balance WHERE id = 1", (err, result) => {
+    if (err) return res.status(500).send(err);
+    const balance = result[0] ? result[0].balance : 0;
+    console.log("Current balance:", balance);
+    res.json({ balance :Number(balance)});
+  });
+});
+
+// ===============================
+// PUT /portfolio/buy-again/:id – Merge new quantity & update weighted avg price
+// ===============================
+router.put("/buyagain/:id", (req, res) => {
+  const stockId = req.params.id;
+  const { quantity: newQty, buy_price: newPrice } = req.body;
+
+  // Fetch current data first
+  db.query("SELECT quantity, buy_price FROM portfolio WHERE id = ?", [stockId], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(500).json({ error: "Stock not found or DB error" });
+    }
+
+    const { quantity: oldQty, buy_price: oldPrice } = results[0];
+
+    // Calculate updated values
+    const updatedQty = oldQty + newQty;
+    const totalCost = oldQty * oldPrice + newQty * newPrice;
+    const weightedAvgPrice = totalCost / updatedQty;
+
+    // Update with new quantity and avg price
+    db.query(
+      "UPDATE portfolio SET quantity = ?, buy_price = ? WHERE id = ?",
+      [updatedQty, weightedAvgPrice.toFixed(2), stockId],
+      (updateErr) => {
+        if (updateErr) {
+          console.error("Error updating stock:", updateErr);
+          return res.status(500).json({ error: "Error updating stock" });
+        }
+
+        res.json({ message: "Stock updated with new quantity and price" });
+      }
+    );
+  });
+});
+// router.delete("/:id", (req, res) => {
+//   const { id } = req.params;
+
+//   console.log("Deleting investment with ID:", id);
+//   const query = "DELETE FROM portfolio WHERE id = ?";
+//   db.query(query, [id], (err, result) => {
+//     if (err) {
+//       console.error("Error deleting investment:", err);
+//       return res.status(500).json({ message: "Internal server error." });
+//     }
+
+//     if (result.affectedRows === 0) {
+//       return res.status(404).json({ message: "Investment not found." });
+//     }
+
+//     res.json({ message: "Investment deleted successfully." });
+//   });
+// });
+
+router.delete("/:id", (req, res) => {
+  const { id } = req.params;
+
+  // Step 1: Get the stock to refund its value
+  db.query("SELECT quantity, buy_price FROM portfolio WHERE id = ?", [id], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(404).json({ message: "Stock not found." });
+    }
+
+    const { quantity, buy_price } = results[0];
+    const refundAmount = quantity * buy_price;
+
+    // Step 2: Delete the stock
+    db.query("DELETE FROM portfolio WHERE id = ?", [id], (err2, result2) => {
+      if (err2) {
+        console.error("Error deleting stock:", err2);
+        return res.status(500).json({ message: "Delete failed." });
+      }
+
+      // Step 3: Refund balance
+      db.query("UPDATE account_balance SET balance = balance + ? WHERE id = 1", [refundAmount], (err3) => {
+        if (err3) {
+          console.error("Balance refund failed:", err3);
+          return res.status(500).json({ message: "Stock deleted but balance refund failed." });
+        }
+
+        res.json({ message: "Stock deleted and balance refunded." });
+      });
+    });
+  });
+});
+
+
+router.put("/update/:id", (req, res) => {
+  const stockId = req.params.id;
+  const { stock_symbol, company_name, quantity, buy_price } = req.body;
+
+  if (!stock_symbol || !company_name || !quantity || !buy_price) {
+    return res.status(400).json({ message: "All fields are required." });
+  }
+
+  const sql = `
+    UPDATE portfolio 
+    SET stock_symbol = ?, company_name = ?, quantity = ?, buy_price = ?
+    WHERE id = ?
+  `;
+
+  db.query(
+    sql,
+    [stock_symbol, company_name, quantity, buy_price, stockId],
+    (err, result) => {
+      if (err) {
+        console.error("Error updating stock:", err);
+        return res.status(500).json({ message: "Failed to update stock." });
+      }
+      return res.json({ message: "Stock updated successfully!" });
     }
   );
 });
+
+
+
+
 
 export default router;

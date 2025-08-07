@@ -16,6 +16,7 @@ id INT PRIMARY KEY AUTO_INCREMENT,
 stock_symbol VARCHAR(10) NOT NULL UNIQUE,
 quantity INT NOT NULL,
 avg_buy_price DECIMAL(10, 2) NOT NULL
+company_name VARCHAR(50)
 );
 
  CREATE TABLE realized_profit_loss (
@@ -72,9 +73,11 @@ VALUES
 
 INSERT INTO portfolio (stock_symbol, quantity, avg_buy_price)
 VALUES
-('INFY', 5, 1450.00),
-('RELIANCE', 20, 2700.00),
-('TCS', 3, 3650.00);
+('INFY', 5, 1450.00,'Infosys Limited'),
+('TCS', 3, 3650.00, 'Tata Consultancy Services'),
+('RELIANCE', 20, 2700.00, 'Reliance Industries Limited');
+('RELIANCE', 20, 2700.00, 'Reliance Industries Limited');,
+('TCS', 3, 3650.00, 'Tata Consultancy Services');
 
 INSERT INTO realized_profit_loss (stock_symbol, realized_pl)
 VALUES
